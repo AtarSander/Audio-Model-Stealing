@@ -1,25 +1,25 @@
 seed: 42
 
 paths:
-  glue_dir: data/raw/glue
+  boolq_dir: data/raw/boolq
   wikitext_raw: data/raw/wikitext103/wiki.train.raw
-  wikitext_sentences: data/processed/wikitext103/wikitext103-sentences.txt
-  output_root: output/repro/modern_classifier
-  checkpoint_root: checkpoints/repro/modern_classifier
+  wikitext_paragraphs: data/processed/wikitext103/wikitext103-paragraphs.txt
+  output_root: output/repro/modern_qa
+  checkpoint_root: checkpoints/repro/modern_qa
   victim_model_dir: null
 
 model:
   pretrained_model_name_or_path: google-bert/bert-large-uncased
-  max_seq_length: 128
+  max_seq_length: 512
   do_lower_case: true
   gradient_checkpointing: true
 
 training:
-  learning_rate: 3.0e-5
+  learning_rate: 1.0e-5
   num_train_epochs: 3.0
-  per_device_train_batch_size: 8
+  per_device_train_batch_size: 4
   per_device_eval_batch_size: 8
-  gradient_accumulation_steps: 4
+  gradient_accumulation_steps: 6
   warmup_proportion: 0.1
   weight_decay: 0.0
   max_grad_norm: 1.0
@@ -27,13 +27,10 @@ training:
   mixed_precision: auto
 
 query_generation:
-  max_query_length: 60
-  thief_sentence_threshold: 50
-  top_k_vocab: 10000
-  ed1_changes: 3
+  question_sampling_scheme: random_postprocess_uniform
   augmentations: 1
   dataset_size: null
-  sanitize_samples: true
+  thief_paragraph_limit: null
 
 runtime:
   device: auto

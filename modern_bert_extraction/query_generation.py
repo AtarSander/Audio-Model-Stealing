@@ -5,7 +5,7 @@ from pathlib import Path
 import random
 from typing import Sequence
 
-from modern_bert_extraction.glue import TASK_SPECS, normalize_task_name
+from modern_bert_extraction.glue import normalize_task_name
 
 
 def sentencize_wikitext(raw_path: str | Path, output_path: str | Path) -> list[str]:
@@ -107,7 +107,6 @@ def generate_queries(
     seed: int,
 ) -> list[dict[str, str]]:
     task_name = normalize_task_name(task)
-    spec = TASK_SPECS[task_name]
     resized_rows = resize_rows(base_rows, dataset_size)
     vocab_set = set(vocab)
     rng = random.Random(seed)
@@ -164,4 +163,3 @@ def generate_queries(
                 raise ValueError("Unsupported scheme: {}".format(scheme))
             output_rows.append(updated)
     return output_rows
-

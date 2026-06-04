@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
-from typing import Sequence
 
 from loguru import logger
 import numpy as np
@@ -57,12 +55,22 @@ class ClassifierExtractionPipeline:
         self.seed = int(config.get("seed", 42))
 
         task_slug = self.task_name.replace("-", "")
-        self.run_root = Path(self.paths["output_root"]) / "{}_{}".format(task_slug, self.scheme)
+        self.run_name = "{}_{}".format(task_slug, self.scheme)
+        self.run_root = Path(self.paths["output_root"]) / self.run_name
+        configured_checkpoint_root = self.paths.get("checkpoint_root")
+        self.checkpoint_run_root = (
+            Path(configured_checkpoint_root) / self.run_name
+            if configured_checkpoint_root
+            else self.run_root
+        )
         self.data_dir = self.run_root / "data"
-        self.victim_dir = self.run_root / "victim_model"
-        self.extracted_dir = self.run_root / "extracted_model"
+        configured_victim_dir = self.paths.get("victim_model_dir")
+        self.reused_victim_dir = Path(configured_victim_dir) if configured_victim_dir else None
+        self.victim_dir = self.reused_victim_dir or self.checkpoint_run_root / "victim_model"
+        self.extracted_dir = self.checkpoint_run_root / "extracted_model"
         self.metrics_dir = self.run_root / "metrics"
         self.run_root.mkdir(parents=True, exist_ok=True)
+        self.checkpoint_run_root.mkdir(parents=True, exist_ok=True)
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self.metrics_dir.mkdir(parents=True, exist_ok=True)
 
@@ -81,6 +89,14 @@ class ClassifierExtractionPipeline:
         if device.type == "cuda":
             gpu_name = torch.cuda.get_device_name(device)
             logger.info("GPU {}", gpu_name)
+        if self.reused_victim_dir is not None:
+            if not self.reused_victim_dir.exists():
+                raise FileNotFoundError(
+                    "Configured victim checkpoint does not exist: {}".format(
+                        self.reused_victim_dir
+                    )
+                )
+            logger.info("Reusing victim checkpoint from {}", self.reused_victim_dir)
         save_json(self.run_root / "resolved_config.json", self.config)
         logger.info("Saved resolved config to {}", self.run_root / "resolved_config.json")
 
@@ -97,10 +113,32 @@ class ClassifierExtractionPipeline:
         return sentences
 
     def train_victim(self) -> None:
-        _, train_rows = read_tsv_rows(self.base_task_dir / self.spec.train_filename)
         _, dev_rows = read_tsv_rows(self.base_task_dir / self.spec.dev_filename)
-        train_examples = standard_examples_from_rows(self.task_name, train_rows, split="train")
         dev_examples = standard_examples_from_rows(self.task_name, dev_rows, split="dev")
+        if self.reused_victim_dir is not None:
+            logger.info(
+                "Skipping victim training; evaluating reused checkpoint {}", self.victim_dir
+            )
+            probabilities = predict_probabilities(
+                model_dir_or_name=self.victim_dir,
+                examples=dev_examples,
+                num_labels=self.spec.num_labels,
+                training_cfg=self.training_cfg,
+                model_cfg=self.model_cfg,
+                runtime_cfg=self.runtime_cfg,
+            )
+            labels = np.array([example.label for example in dev_examples], dtype=np.int64)
+            predicted = probabilities.argmax(axis=-1)
+            metrics = {
+                "accuracy": float((predicted == labels).mean()) if len(labels) else 0.0,
+                "num_examples": int(len(labels)),
+                "source_checkpoint": str(self.victim_dir),
+            }
+            save_json(self.metrics_dir / "victim_dev_metrics.json", metrics)
+            return
+
+        _, train_rows = read_tsv_rows(self.base_task_dir / self.spec.train_filename)
+        train_examples = standard_examples_from_rows(self.task_name, train_rows, split="train")
         logger.info(
             "Training victim model on {} train examples and {} dev examples",
             len(train_examples),
@@ -155,7 +193,9 @@ class ClassifierExtractionPipeline:
             model_cfg=self.model_cfg,
             runtime_cfg=self.runtime_cfg,
         )
-        self.query_probs_tsv.write_text("\n".join(probability_lines(probabilities)) + "\n", encoding="utf-8")
+        self.query_probs_tsv.write_text(
+            "\n".join(probability_lines(probabilities)) + "\n", encoding="utf-8"
+        )
         logger.info(
             "Wrote victim probability outputs for {} examples to {}",
             len(probabilities),
@@ -253,9 +293,7 @@ class ClassifierExtractionPipeline:
         eps = 1.0e-12
         victim_safe = np.clip(victim_probs, eps, 1.0)
         extracted_safe = np.clip(extracted_probs, eps, 1.0)
-        agreement = float(
-            (victim_probs.argmax(axis=-1) == extracted_probs.argmax(axis=-1)).mean()
-        )
+        agreement = float((victim_probs.argmax(axis=-1) == extracted_probs.argmax(axis=-1)).mean())
         l2 = np.linalg.norm(victim_probs - extracted_probs, axis=-1)
         kld_victim_to_extracted = np.sum(
             victim_safe * (np.log(victim_safe) - np.log(extracted_safe)), axis=-1

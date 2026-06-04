@@ -1,23 +1,10 @@
 from __future__ import annotations
 
-import csv
 from dataclasses import dataclass
 from pathlib import Path
-import sys
 from typing import Iterable, Sequence
 
-
-def _set_max_csv_field_size() -> None:
-    limit = sys.maxsize
-    while True:
-        try:
-            csv.field_size_limit(limit)
-            return
-        except OverflowError:
-            limit = limit // 10
-
-
-_set_max_csv_field_size()
+from loguru import logger
 
 
 @dataclass
@@ -81,22 +68,50 @@ def task_data_dir(glue_dir: str | Path, task: str) -> Path:
 
 
 def read_tsv_rows(path: str | Path) -> tuple[list[str], list[dict[str, str]]]:
-    with Path(path).open("r", encoding="utf-8", newline="") as handle:
-        reader = csv.DictReader(handle, delimiter="\t")
-        if reader.fieldnames is None:
+    input_path = Path(path)
+    with input_path.open("r", encoding="utf-8") as handle:
+        header = handle.readline()
+        if not header:
             raise ValueError("Missing TSV header in {}".format(path))
-        rows = [dict(row) for row in reader]
-        return list(reader.fieldnames), rows
+        fieldnames = header.rstrip("\r\n").split("\t")
+        rows: list[dict[str, str]] = []
+        malformed_rows = 0
+        for line_number, line in enumerate(handle, start=2):
+            parts = line.rstrip("\r\n").split("\t")
+            if len(parts) != len(fieldnames):
+                malformed_rows += 1
+                logger.warning(
+                    "Skipping malformed TSV row {} in {}: expected {} fields, got {}",
+                    line_number,
+                    input_path,
+                    len(fieldnames),
+                    len(parts),
+                )
+                continue
+            rows.append(dict(zip(fieldnames, parts)))
+    return fieldnames, rows
 
 
-def write_tsv_rows(path: str | Path, fieldnames: Sequence[str], rows: Iterable[dict[str, str]]) -> None:
+def _sanitize_tsv_cell(value: object) -> str:
+    return (
+        str(value if value is not None else "")
+        .replace("\t", " ")
+        .replace("\r", " ")
+        .replace("\n", " ")
+    )
+
+
+def write_tsv_rows(
+    path: str | Path, fieldnames: Sequence[str], rows: Iterable[dict[str, str]]
+) -> None:
     output_path = Path(path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    with output_path.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, delimiter="\t", fieldnames=list(fieldnames))
-        writer.writeheader()
+    with output_path.open("w", encoding="utf-8") as handle:
+        handle.write("\t".join(_sanitize_tsv_cell(field) for field in fieldnames) + "\n")
         for row in rows:
-            writer.writerow(row)
+            handle.write(
+                "\t".join(_sanitize_tsv_cell(row.get(field, "")) for field in fieldnames) + "\n"
+            )
 
 
 def append_probability_columns(
@@ -105,7 +120,9 @@ def append_probability_columns(
     num_labels: int,
 ) -> tuple[list[str], list[dict[str, str]]]:
     if len(rows) != len(probabilities):
-        raise ValueError("Row/probability count mismatch: {} vs {}".format(len(rows), len(probabilities)))
+        raise ValueError(
+            "Row/probability count mismatch: {} vs {}".format(len(rows), len(probabilities))
+        )
 
     extra_fields = ["label{}_prob".format(index) for index in range(num_labels)]
     fieldnames = list(rows[0].keys()) + extra_fields if rows else extra_fields
@@ -118,22 +135,39 @@ def append_probability_columns(
     return fieldnames, output_rows
 
 
-def standard_examples_from_rows(task: str, rows: Sequence[dict[str, str]], split: str) -> list[ClassifierExample]:
+def standard_examples_from_rows(
+    task: str, rows: Sequence[dict[str, str]], split: str
+) -> list[ClassifierExample]:
     task_name = normalize_task_name(task)
     spec = TASK_SPECS[task_name]
     examples: list[ClassifierExample] = []
+    skipped_rows = 0
     for index, row in enumerate(rows):
-        if task_name == "mnli" and row.get(spec.label_field, "").strip() == "-":
+        label_value = (row.get(spec.label_field) or "").strip()
+        if split != "test" and label_value not in spec.label_names:
+            skipped_rows += 1
             continue
-        text_a = row[spec.text_fields[0]]
-        text_b = row[spec.text_fields[1]] if len(spec.text_fields) > 1 else None
+        text_a = row.get(spec.text_fields[0])
+        text_b = row.get(spec.text_fields[1]) if len(spec.text_fields) > 1 else None
+        if text_a is None or (len(spec.text_fields) > 1 and text_b is None):
+            skipped_rows += 1
+            continue
         guid = "{}-{}".format(split, row.get("index", index))
-        label = spec.label_to_id(row[spec.label_field]) if split != "test" else None
+        label = spec.label_to_id(label_value) if split != "test" else None
         examples.append(ClassifierExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
+    if skipped_rows:
+        logger.warning(
+            "Skipped {} malformed/unlabeled {} rows for split {}",
+            skipped_rows,
+            task_name,
+            split,
+        )
     return examples
 
 
-def distilled_examples_from_rows(task: str, rows: Sequence[dict[str, str]], split: str) -> list[ClassifierExample]:
+def distilled_examples_from_rows(
+    task: str, rows: Sequence[dict[str, str]], split: str
+) -> list[ClassifierExample]:
     task_name = normalize_task_name(task)
     spec = TASK_SPECS[task_name]
     examples: list[ClassifierExample] = []
