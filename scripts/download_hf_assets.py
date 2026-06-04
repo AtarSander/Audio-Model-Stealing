@@ -35,7 +35,7 @@ def parse_args() -> argparse.Namespace:
     wikitext_parser = subparsers.add_parser("wikitext")
     wikitext_parser.add_argument(
         "--output-dir",
-        default="external/repro/wikitext103",
+        default="data/raw/wikitext103",
         help="Directory where wiki.train.raw / wiki.valid.raw / wiki.test.raw will be written.",
     )
     wikitext_parser.add_argument(

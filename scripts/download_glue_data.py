@@ -48,7 +48,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--data-dir",
-        default="external/repro/glue",
+        default="data/raw/glue",
         help="Directory where the GLUE task folders will be written.",
     )
     parser.add_argument(
