@@ -27,8 +27,10 @@ dependencies = [
     "pyarrow>=21.0.0",
     "python-dotenv",
     "ruff",
+    "soundfile>=0.13.0",
     "torch>=2.11.0",
     "torchaudio>=2.11.0",
+    "torchcodec>=0.8.0",
     "torchvision>=0.26.0",
     "transformers>=4.52.0",
     "tqdm",
@@ -40,14 +42,19 @@ requires-python = "~=3.11.0"
 
 [tool.ruff]
 line-length = 99
-src = ["model_steal", "modern_bert_extraction"]
-include = ["pyproject.toml", "model_steal/**/*.py", "modern_bert_extraction/**/*.py"]
+src = ["model_steal", "modern_bert_extraction", "modern_audio_extraction"]
+include = [
+    "pyproject.toml",
+    "model_steal/**/*.py",
+    "modern_bert_extraction/**/*.py",
+    "modern_audio_extraction/**/*.py",
+]
 
 [tool.ruff.lint]
 extend-select = ["I"]  # Add import sorting
 
 [tool.ruff.lint.isort]
-known-first-party = ["model_steal", "modern_bert_extraction"]
+known-first-party = ["model_steal", "modern_bert_extraction", "modern_audio_extraction"]
 force-sort-within-sections = true
 
 [dependency-groups]
