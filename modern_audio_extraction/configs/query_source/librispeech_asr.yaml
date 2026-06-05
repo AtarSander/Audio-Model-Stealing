@@ -1,0 +1,10 @@
+type: hf_audio
+dataset_name: librispeech_asr
+dataset_config: clean
+split: train.100
+audio_column: audio
+label_column: null
+budget: 512
+sampling_rate: 16000
+max_duration_seconds: 4.0
+force_rebuild_cache: false

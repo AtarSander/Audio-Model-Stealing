@@ -1,49 +1,28 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-import argparse
 import json
 import os
-from pathlib import Path
 import sys
 
+import hydra
 from loguru import logger
+from omegaconf import DictConfig, OmegaConf
 from transformers.utils import logging as transformers_logging
 
-from modern_bert_extraction.pipeline import ClassifierExtractionPipeline, load_config
+from modern_bert_extraction.pipeline import ClassifierExtractionPipeline
 
-
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--config",
-        default=str(Path(__file__).resolve().parent / "configs" / "classifier.yaml"),
-        help="Path to the classifier pipeline YAML config.",
-    )
-    parser.add_argument(
-        "--task", choices=["MNLI", "SST-2", "mnli", "sst-2", "sst2"], default="SST-2"
-    )
-    parser.add_argument("--scheme", choices=["random", "wiki"], default="random")
-    parser.add_argument(
-        "--step",
-        choices=[
-            "all",
-            "preflight",
-            "prepare_wikitext",
-            "train_victim",
-            "generate_queries",
-            "query_victim",
-            "build_distill_data",
-            "train_extracted",
-            "evaluate_agreement",
-        ],
-        default="all",
-    )
-    parser.add_argument("--dataset-size", type=int, default=None)
-    parser.add_argument("--augmentations", type=int, default=None)
-    parser.add_argument("--victim-model-dir", default=None)
-    parser.add_argument("--output-root", default=None)
-    return parser.parse_args()
+PIPELINE_STEPS = {
+    "all",
+    "preflight",
+    "prepare_wikitext",
+    "train_victim",
+    "generate_queries",
+    "query_victim",
+    "build_distill_data",
+    "train_extracted",
+    "evaluate_agreement",
+}
 
 
 def configure_logging() -> None:
@@ -55,30 +34,25 @@ def configure_logging() -> None:
     transformers_logging.set_verbosity_error()
 
 
-def main() -> None:
+@hydra.main(version_base=None, config_path="configs", config_name="classifier")
+def main(cfg: DictConfig) -> None:
     configure_logging()
-    args = parse_args()
-    config = load_config(args.config)
-
-    if args.dataset_size is not None:
-        config["query_generation"]["dataset_size"] = args.dataset_size
-    if args.augmentations is not None:
-        config["query_generation"]["augmentations"] = args.augmentations
-    if args.victim_model_dir is not None:
-        config["paths"]["victim_model_dir"] = args.victim_model_dir
-    if args.output_root is not None:
-        config["paths"]["output_root"] = args.output_root
+    config = OmegaConf.to_container(cfg, resolve=True)  # type: ignore[assignment]
+    run_cfg = config.get("run", {})
+    task = str(run_cfg.get("task", "SST-2"))
+    scheme = str(run_cfg.get("scheme", "random"))
+    step = str(run_cfg.get("step", "all"))
+    if step not in PIPELINE_STEPS:
+        raise ValueError("Unsupported classifier pipeline step: {}".format(step))
 
     cuda_visible_devices = config.get("runtime", {}).get("cuda_visible_devices")
     if cuda_visible_devices is not None:
         os.environ.setdefault("CUDA_VISIBLE_DEVICES", str(cuda_visible_devices))
 
-    logger.info(
-        "Running modern classifier extraction pipeline: task={} scheme={}", args.task, args.scheme
-    )
+    logger.info("Running modern classifier extraction pipeline: task={} scheme={}", task, scheme)
     logger.debug("Resolved config:\n{}", json.dumps(config, indent=2))
-    pipeline = ClassifierExtractionPipeline(config=config, task=args.task, scheme=args.scheme)
-    pipeline.run(args.step)
+    pipeline = ClassifierExtractionPipeline(config=config, task=task, scheme=scheme)
+    pipeline.run(step)
 
 
 if __name__ == "__main__":

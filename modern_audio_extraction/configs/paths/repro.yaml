@@ -1,0 +1,2 @@
+output_root: output/repro/modern_audio
+checkpoint_root: checkpoints/repro/modern_audio

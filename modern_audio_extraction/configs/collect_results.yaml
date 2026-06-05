@@ -1,0 +1,12 @@
+classifier_root: output/repro/modern_classifier
+qa_root: output/repro/modern_qa
+audio_root: output/repro/modern_audio
+output_root: output/repro/comparison
+output_name: comparison_summary
+
+hydra:
+  job:
+    chdir: false
+  run:
+    dir: .
+  output_subdir: null

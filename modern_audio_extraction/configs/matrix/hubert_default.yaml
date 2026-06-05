@@ -1,0 +1,22 @@
+query_budgets: [128, 512, 2048]
+student_models:
+  - facebook/hubert-base-ls960
+  - facebook/wav2vec2-base
+query_sources:
+  - name: speech_librispeech
+    type: hf_audio
+    dataset_name: librispeech_asr
+    dataset_config: clean
+    split: train.100
+    audio_column: audio
+    label_column: null
+    sampling_rate: 16000
+    max_duration_seconds: 4.0
+  - name: synthetic_noise
+    type: synthetic_noise
+    sampling_rate: 16000
+    max_duration_seconds: 4.0
+  - name: synthetic_sine
+    type: synthetic_sine
+    sampling_rate: 16000
+    max_duration_seconds: 4.0

@@ -1,23 +1,14 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-import argparse
 import csv
 import json
 from pathlib import Path
 from typing import Any
 
+import hydra
 from loguru import logger
-
-
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--classifier-root", default="output/repro/modern_classifier")
-    parser.add_argument("--qa-root", default="output/repro/modern_qa")
-    parser.add_argument("--audio-root", default="output/repro/modern_audio")
-    parser.add_argument("--output-root", default="output/repro/comparison")
-    parser.add_argument("--output-name", default="comparison_summary")
-    return parser.parse_args()
+from omegaconf import DictConfig, OmegaConf
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -151,13 +142,14 @@ def write_outputs(rows: list[dict[str, Any]], output_root: Path, output_name: st
     logger.info("Wrote {} rows to {} and {}", len(rows), json_path, csv_path)
 
 
-def main() -> None:
-    args = parse_args()
+@hydra.main(version_base=None, config_path="configs", config_name="collect_results")
+def main(cfg: DictConfig) -> None:
+    config = OmegaConf.to_container(cfg, resolve=True)  # type: ignore[assignment]
     rows = []
-    rows.extend(_collect_text_runs(Path(args.classifier_root), pipeline="classifier"))
-    rows.extend(_collect_text_runs(Path(args.qa_root), pipeline="qa"))
-    rows.extend(_collect_audio_runs(Path(args.audio_root)))
-    write_outputs(rows, Path(args.output_root), args.output_name)
+    rows.extend(_collect_text_runs(Path(config["classifier_root"]), pipeline="classifier"))
+    rows.extend(_collect_text_runs(Path(config["qa_root"]), pipeline="qa"))
+    rows.extend(_collect_audio_runs(Path(config["audio_root"])))
+    write_outputs(rows, Path(config["output_root"]), str(config["output_name"]))
 
 
 if __name__ == "__main__":

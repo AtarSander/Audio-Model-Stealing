@@ -1,0 +1,6 @@
+glue_dir: data/raw/glue
+wikitext_raw: data/raw/wikitext103/wiki.train.raw
+wikitext_sentences: data/processed/wikitext103/wikitext103-sentences.txt
+output_root: output/repro/modern_classifier
+checkpoint_root: checkpoints/repro/modern_classifier
+victim_model_dir: null

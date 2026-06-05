@@ -16,7 +16,7 @@ def sentencize_wikitext(raw_path: str | Path, output_path: str | Path) -> list[s
     sentences = [sentence + "." for paragraph in paragraphs for sentence in paragraph]
     text = "\n".join(sentences)
     text = text.replace(" @.@ ", ".").replace(" @-@ ", "-").replace(" ,", ",")
-    text = text.replace(" \'", "\'").replace(" )", ")").replace("( ", "(")
+    text = text.replace(" '", "'").replace(" )", ")").replace("( ", "(")
     text = text.replace(" ;", ";")
     output_sentences = [line for line in text.split("\n") if len(line.split()) > 3]
 
@@ -26,10 +26,16 @@ def sentencize_wikitext(raw_path: str | Path, output_path: str | Path) -> list[s
     return output_sentences
 
 
-def load_or_prepare_wikitext_sentences(raw_path: str | Path, sentences_path: str | Path) -> list[str]:
+def load_or_prepare_wikitext_sentences(
+    raw_path: str | Path, sentences_path: str | Path
+) -> list[str]:
     output_path = Path(sentences_path)
     if output_path.exists():
-        return [line.strip() for line in output_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        return [
+            line.strip()
+            for line in output_path.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
     return sentencize_wikitext(raw_path, output_path)
 
 
@@ -40,7 +46,9 @@ def build_top_k_vocab(sentences: Sequence[str], top_k: int) -> list[str]:
     return [token for token, _ in full_vocab.most_common(top_k)]
 
 
-def sanitize_sentence(tokens: Sequence[str], vocab: Sequence[str], vocab_set: set[str], rng: random.Random) -> list[str]:
+def sanitize_sentence(
+    tokens: Sequence[str], vocab: Sequence[str], vocab_set: set[str], rng: random.Random
+) -> list[str]:
     return [token if token in vocab_set else rng.choice(vocab) for token in tokens]
 
 
@@ -69,7 +77,9 @@ def sample_random_sequence(vocab: Sequence[str], length: int, rng: random.Random
     return [rng.choice(vocab) for _ in range(length)]
 
 
-def token_replace(tokens: Sequence[str], vocab: Sequence[str], num_changes: int, rng: random.Random) -> list[str]:
+def token_replace(
+    tokens: Sequence[str], vocab: Sequence[str], num_changes: int, rng: random.Random
+) -> list[str]:
     output = list(tokens)
     for _ in range(num_changes):
         random_index = rng.randint(0, len(output) - 1)

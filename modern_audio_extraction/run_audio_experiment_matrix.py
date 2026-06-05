@@ -1,16 +1,26 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-import argparse
 from copy import deepcopy
 import csv
 import json
 from pathlib import Path
 import sys
 
+import hydra
 from loguru import logger
+from omegaconf import DictConfig, OmegaConf
 
-from modern_audio_extraction.pipeline import AudioEncoderExtractionPipeline, load_config
+from modern_audio_extraction.pipeline import AudioEncoderExtractionPipeline
+
+PIPELINE_STEPS = {
+    "all",
+    "preflight",
+    "build_query_cache",
+    "train_stolen_encoder",
+    "evaluate_feature_similarity",
+    "evaluate_downstream",
+}
 
 
 def configure_logging() -> None:
@@ -19,29 +29,6 @@ def configure_logging() -> None:
         sys.stderr,
         format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | {message}",
     )
-
-
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--config",
-        default=str(Path(__file__).resolve().parent / "configs" / "hubert_stolenencoder.yaml"),
-    )
-    parser.add_argument(
-        "--step",
-        choices=[
-            "all",
-            "preflight",
-            "build_query_cache",
-            "train_stolen_encoder",
-            "evaluate_feature_similarity",
-            "evaluate_downstream",
-        ],
-        default="all",
-    )
-    parser.add_argument("--skip-existing", action="store_true")
-    parser.add_argument("--output-name", default="matrix_summary")
-    return parser.parse_args()
 
 
 def _safe_slug(value: str) -> str:
@@ -74,19 +61,26 @@ def _matrix_configs(base_config: dict):
                 yield config
 
 
-def main() -> None:
+@hydra.main(version_base=None, config_path="configs", config_name="hubert_stolenencoder")
+def main(cfg: DictConfig) -> None:
     configure_logging()
-    args = parse_args()
-    base_config = load_config(args.config)
+    base_config = OmegaConf.to_container(cfg, resolve=True)  # type: ignore[assignment]
+    matrix_run = base_config.get("matrix_run", {})
+    step = str(matrix_run.get("step", "all"))
+    if step not in PIPELINE_STEPS:
+        raise ValueError("Unsupported audio matrix pipeline step: {}".format(step))
+    skip_existing = bool(matrix_run.get("skip_existing", False))
+    output_name = str(matrix_run.get("output_name", "matrix_summary"))
+
     final_metrics: list[dict] = []
     for config in _matrix_configs(base_config):
         pipeline = AudioEncoderExtractionPipeline(config)
         final_path = pipeline.metrics_dir / "final_metrics.json"
-        if args.skip_existing and final_path.exists():
+        if skip_existing and final_path.exists():
             logger.info("Skipping existing run {}", pipeline.run_name)
         else:
             logger.info("Running matrix experiment {}", pipeline.run_name)
-            pipeline.run(args.step)
+            pipeline.run(step)
         if final_path.exists():
             final_metrics.append(json.loads(final_path.read_text(encoding="utf-8")))
         else:
@@ -103,8 +97,8 @@ def main() -> None:
 
     output_root = Path(base_config["paths"]["output_root"])
     output_root.mkdir(parents=True, exist_ok=True)
-    json_path = output_root / "{}.json".format(args.output_name)
-    csv_path = output_root / "{}.csv".format(args.output_name)
+    json_path = output_root / "{}.json".format(output_name)
+    csv_path = output_root / "{}.csv".format(output_name)
     json_path.write_text(json.dumps(final_metrics, indent=2), encoding="utf-8")
     if final_metrics:
         fieldnames = sorted({key for row in final_metrics for key in row})

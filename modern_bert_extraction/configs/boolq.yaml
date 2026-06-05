@@ -1,38 +1,23 @@
+defaults:
+  - model: bert_large_uncased
+  - paths: boolq
+  - training: boolq
+  - query_generation: qa
+  - runtime: gpu
+  - _self_
+
 seed: 42
 
-paths:
-  boolq_dir: data/raw/boolq
-  wikitext_raw: data/raw/wikitext103/wiki.train.raw
-  wikitext_paragraphs: data/processed/wikitext103/wikitext103-paragraphs.txt
-  output_root: output/repro/modern_qa
-  checkpoint_root: checkpoints/repro/modern_qa
-  victim_model_dir: null
+run:
+  scheme: random
+  step: all
 
 model:
-  pretrained_model_name_or_path: google-bert/bert-large-uncased
   max_seq_length: 512
-  do_lower_case: true
-  gradient_checkpointing: true
 
-training:
-  learning_rate: 1.0e-5
-  num_train_epochs: 3.0
-  per_device_train_batch_size: 4
-  per_device_eval_batch_size: 8
-  gradient_accumulation_steps: 6
-  warmup_proportion: 0.1
-  weight_decay: 0.0
-  max_grad_norm: 1.0
-  dataloader_num_workers: 2
-  mixed_precision: auto
-
-query_generation:
-  question_sampling_scheme: random_postprocess_uniform
-  augmentations: 1
-  dataset_size: null
-  thief_paragraph_limit: null
-
-runtime:
-  device: auto
-  require_gpu: true
-  cuda_visible_devices: null
+hydra:
+  job:
+    chdir: false
+  run:
+    dir: .
+  output_subdir: null

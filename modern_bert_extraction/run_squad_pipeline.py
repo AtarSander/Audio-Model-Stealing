@@ -1,19 +1,18 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-import argparse
 import json
 import os
-from pathlib import Path
 import sys
 
+import hydra
 from loguru import logger
+from omegaconf import DictConfig, OmegaConf
 from transformers.utils import logging as transformers_logging
 
-from modern_bert_extraction.pipeline import load_config
 from modern_bert_extraction.squad_pipeline import SquadExtractionPipeline
 
-PIPELINE_STEPS = [
+PIPELINE_STEPS = {
     "all",
     "preflight",
     "prepare_wikitext",
@@ -23,24 +22,7 @@ PIPELINE_STEPS = [
     "build_distill_data",
     "train_extracted",
     "evaluate_agreement",
-]
-
-
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--config",
-        default=str(Path(__file__).resolve().parent / "configs" / "squad11.yaml"),
-        help="Path to the SQuAD 1.1 pipeline YAML config.",
-    )
-    parser.add_argument("--scheme", choices=["random", "wiki"], default="random")
-    parser.add_argument("--step", choices=PIPELINE_STEPS, default="all")
-    parser.add_argument("--dataset-size", type=int, default=None)
-    parser.add_argument("--augmentations", type=int, default=None)
-    parser.add_argument("--thief-paragraph-limit", type=int, default=None)
-    parser.add_argument("--victim-model-dir", default=None)
-    parser.add_argument("--output-root", default=None)
-    return parser.parse_args()
+}
 
 
 def configure_logging() -> None:
@@ -52,30 +34,24 @@ def configure_logging() -> None:
     transformers_logging.set_verbosity_error()
 
 
-def main() -> None:
+@hydra.main(version_base=None, config_path="configs", config_name="squad11")
+def main(cfg: DictConfig) -> None:
     configure_logging()
-    args = parse_args()
-    config = load_config(args.config)
-
-    if args.dataset_size is not None:
-        config["query_generation"]["dataset_size"] = args.dataset_size
-    if args.augmentations is not None:
-        config["query_generation"]["augmentations"] = args.augmentations
-    if args.thief_paragraph_limit is not None:
-        config["query_generation"]["thief_paragraph_limit"] = args.thief_paragraph_limit
-    if args.victim_model_dir is not None:
-        config["paths"]["victim_model_dir"] = args.victim_model_dir
-    if args.output_root is not None:
-        config["paths"]["output_root"] = args.output_root
+    config = OmegaConf.to_container(cfg, resolve=True)  # type: ignore[assignment]
+    run_cfg = config.get("run", {})
+    scheme = str(run_cfg.get("scheme", "random"))
+    step = str(run_cfg.get("step", "all"))
+    if step not in PIPELINE_STEPS:
+        raise ValueError("Unsupported SQuAD pipeline step: {}".format(step))
 
     cuda_visible_devices = config.get("runtime", {}).get("cuda_visible_devices")
     if cuda_visible_devices is not None:
         os.environ.setdefault("CUDA_VISIBLE_DEVICES", str(cuda_visible_devices))
 
-    logger.info("Running modern SQuAD 1.1 extraction pipeline: scheme={}", args.scheme)
+    logger.info("Running modern SQuAD 1.1 extraction pipeline: scheme={}", scheme)
     logger.debug("Resolved config:\n{}", json.dumps(config, indent=2))
-    pipeline = SquadExtractionPipeline(config=config, scheme=args.scheme)
-    pipeline.run(args.step)
+    pipeline = SquadExtractionPipeline(config=config, scheme=scheme)
+    pipeline.run(step)
 
 
 if __name__ == "__main__":

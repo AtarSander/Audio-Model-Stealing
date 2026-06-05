@@ -18,6 +18,33 @@ Default config:
 modern_audio_extraction/configs/hubert_stolenencoder.yaml
 ```
 
+The runner is Hydra-based. Override values with dotlist syntax:
+
+```bash
+uv run -m modern_audio_extraction.run_audio_encoder_pipeline \
+  run.step=build_query_cache \
+  query_source.budget=128 \
+  student.model_name_or_path=facebook/wav2vec2-base
+```
+
+The top-level config composes reusable groups under:
+
+```text
+configs/target/
+configs/student/
+configs/query_source/
+configs/training/
+configs/downstream/
+configs/runtime/
+configs/matrix/
+```
+
+Inspect the resolved config without launching a run:
+
+```bash
+uv run -m modern_audio_extraction.run_audio_encoder_pipeline --cfg job
+```
+
 Run a full HuBERT experiment:
 
 ```bash

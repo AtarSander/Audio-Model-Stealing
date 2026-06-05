@@ -1,0 +1,6 @@
+device: auto
+require_gpu: true
+mixed_precision: auto
+cuda_visible_devices: null
+query_batch_size: 4
+eval_batch_size: 4

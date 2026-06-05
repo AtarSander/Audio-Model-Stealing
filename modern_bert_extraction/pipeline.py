@@ -4,7 +4,6 @@ from pathlib import Path
 
 from loguru import logger
 import numpy as np
-from omegaconf import OmegaConf
 import torch
 
 from modern_bert_extraction.glue import (
@@ -29,10 +28,6 @@ from modern_bert_extraction.training import (
     save_json,
     train_model,
 )
-
-
-def load_config(path: str | Path) -> dict:
-    return OmegaConf.to_container(OmegaConf.load(path), resolve=True)  # type: ignore[return-value]
 
 
 def _task_display_name(task_name: str) -> str:

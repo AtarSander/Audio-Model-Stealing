@@ -1,0 +1,17 @@
+enabled: true
+dataset_name: superb
+dataset_config: ks
+train_split: train
+eval_split: validation
+audio_column: audio
+label_column: label
+train_budget: 2000
+eval_budget: 1000
+sampling_rate: 16000
+max_duration_seconds: 2.0
+probe:
+  hidden_sizes: [512, 256]
+  learning_rate: 1.0e-4
+  batch_size: 128
+  num_train_epochs: 20
+  weight_decay: 0.0

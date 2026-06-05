@@ -1,96 +1,28 @@
+defaults:
+  - paths: repro
+  - target: hubert_base
+  - student: wav2vec2_base
+  - query_source: librispeech_asr
+  - training: stolenencoder
+  - downstream: superb_ks
+  - runtime: gpu
+  - matrix: hubert_default
+  - _self_
+
 seed: 42
 run_name: null
 
-paths:
-  output_root: output/repro/modern_audio
-  checkpoint_root: checkpoints/repro/modern_audio
+run:
+  step: all
 
-target:
-  model_name_or_path: facebook/hubert-base-ls960
-  hidden_size: null
+matrix_run:
+  step: all
+  skip_existing: false
+  output_name: matrix_summary
 
-student:
-  model_name_or_path: facebook/wav2vec2-base
-  init_from_pretrained: true
-  freeze_feature_encoder: false
-
-query_source:
-  type: hf_audio
-  dataset_name: librispeech_asr
-  dataset_config: clean
-  split: train.100
-  audio_column: audio
-  label_column: null
-  budget: 512
-  sampling_rate: 16000
-  max_duration_seconds: 4.0
-  force_rebuild_cache: false
-
-training:
-  sampling_rate: 16000
-  learning_rate: 1.0e-4
-  num_train_epochs: 3.0
-  per_device_train_batch_size: 4
-  gradient_accumulation_steps: 1
-  warmup_proportion: 0.05
-  weight_decay: 0.0
-  max_grad_norm: 1.0
-  dataloader_num_workers: 0
-  distance_metric: mse
-  lambda_aug: 20.0
-  augmentation:
-    noise_std: 0.003
-    gain_min: 0.9
-    gain_max: 1.1
-    max_time_shift_seconds: 0.05
-
-downstream:
-  enabled: true
-  dataset_name: superb
-  dataset_config: ks
-  train_split: train
-  eval_split: validation
-  audio_column: audio
-  label_column: label
-  train_budget: 2000
-  eval_budget: 1000
-  sampling_rate: 16000
-  max_duration_seconds: 2.0
-  probe:
-    hidden_sizes: [512, 256]
-    learning_rate: 1.0e-4
-    batch_size: 128
-    num_train_epochs: 20
-    weight_decay: 0.0
-
-runtime:
-  device: auto
-  require_gpu: true
-  mixed_precision: auto
-  cuda_visible_devices: null
-  query_batch_size: 4
-  eval_batch_size: 4
-
-matrix:
-  query_budgets: [128, 512, 2048]
-  student_models:
-    - facebook/hubert-base-ls960
-    - facebook/wav2vec2-base
-  query_sources:
-    - name: speech_librispeech
-      type: hf_audio
-      dataset_name: librispeech_asr
-      dataset_config: clean
-      split: train.100
-      audio_column: audio
-      label_column: null
-      sampling_rate: 16000
-      max_duration_seconds: 4.0
-    - name: synthetic_noise
-      type: synthetic_noise
-      sampling_rate: 16000
-      max_duration_seconds: 4.0
-    - name: synthetic_sine
-      type: synthetic_sine
-      sampling_rate: 16000
-      max_duration_seconds: 4.0
+hydra:
+  job:
+    chdir: false
+  run:
+    dir: .
+  output_subdir: null

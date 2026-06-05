@@ -28,21 +28,44 @@ Suggested classifier run:
 
 ```bash
 uv run -m modern_bert_extraction.run_classifier_pipeline \
-  --config modern_bert_extraction/configs/classifier.yaml \
-  --task SST-2 \
-  --scheme random
+  run.task=SST-2 \
+  run.scheme=random
 ```
 
 Suggested QA runs:
 
 ```bash
 uv run -m modern_bert_extraction.run_squad_pipeline \
-  --config modern_bert_extraction/configs/squad11.yaml \
-  --scheme random
+  run.scheme=random
 
 uv run -m modern_bert_extraction.run_boolq_pipeline \
-  --config modern_bert_extraction/configs/boolq.yaml \
-  --scheme random
+  run.scheme=random
+```
+
+The runners are Hydra entrypoints. Use `run.step=<stage>` for partial runs and
+override config values with dotlist syntax, for example:
+
+```bash
+uv run -m modern_bert_extraction.run_classifier_pipeline \
+  run.task=MNLI \
+  run.scheme=wiki \
+  training.per_device_train_batch_size=4
+```
+
+The top-level configs are composition files. Reusable blocks live under:
+
+```text
+configs/model/
+configs/paths/
+configs/training/
+configs/query_generation/
+configs/runtime/
+```
+
+Inspect the resolved config without launching a run:
+
+```bash
+uv run -m modern_bert_extraction.run_classifier_pipeline --cfg job
 ```
 
 Suggested WIKI paper-comparison run after RANDOM victims exist:
@@ -51,5 +74,5 @@ Suggested WIKI paper-comparison run after RANDOM victims exist:
 make modern_reproduce_wiki_reuse_victims
 ```
 
-The reuse targets pass `--victim-model-dir` so WIKI extraction uses the same
-victim checkpoints as the RANDOM runs for each task.
+The reuse targets override `paths.victim_model_dir`, so WIKI extraction uses
+the same victim checkpoints as the RANDOM runs for each task.

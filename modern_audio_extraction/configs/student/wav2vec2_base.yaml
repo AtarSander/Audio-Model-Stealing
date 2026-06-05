@@ -1,0 +1,3 @@
+model_name_or_path: facebook/wav2vec2-base
+init_from_pretrained: true
+freeze_feature_encoder: false

@@ -103,7 +103,9 @@ class ExampleCollator:
         encoded["hard_labels"] = torch.tensor(hard_labels, dtype=torch.long)
 
         if batch[0].soft_labels is not None:
-            encoded["soft_labels"] = torch.tensor([example.soft_labels for example in batch], dtype=torch.float32)
+            encoded["soft_labels"] = torch.tensor(
+                [example.soft_labels for example in batch], dtype=torch.float32
+            )
         return encoded
 
 
@@ -284,7 +286,9 @@ def train_model(
             if step_index % grad_accum == 0 or step_index == len(train_loader):
                 if scaler.is_enabled():
                     scaler.unscale_(optimizer)
-                torch.nn.utils.clip_grad_norm_(model.parameters(), float(training_cfg.get("max_grad_norm", 1.0)))
+                torch.nn.utils.clip_grad_norm_(
+                    model.parameters(), float(training_cfg.get("max_grad_norm", 1.0))
+                )
                 if scaler.is_enabled():
                     scaler.step(optimizer)
                     scaler.update()
@@ -327,7 +331,9 @@ def load_model_and_tokenizer(
     dtype = auto_mixed_precision_dtype(training_cfg.get("mixed_precision", "auto"), device)
     logger.info("Loading classifier for inference from {}", model_dir_or_name)
     tokenizer = AutoTokenizer.from_pretrained(str(model_dir_or_name), use_fast=True)
-    model = AutoModelForSequenceClassification.from_pretrained(str(model_dir_or_name), num_labels=num_labels)
+    model = AutoModelForSequenceClassification.from_pretrained(
+        str(model_dir_or_name), num_labels=num_labels
+    )
     model.to(device)
     model.eval()
     return model, tokenizer, device, dtype
@@ -369,7 +375,9 @@ def predict_probabilities(
     return np.concatenate(probabilities, axis=0) if probabilities else np.zeros((0, num_labels))
 
 
-def evaluate_model(model, dataloader: DataLoader, device: torch.device, dtype: torch.dtype | None) -> dict[str, float]:
+def evaluate_model(
+    model, dataloader: DataLoader, device: torch.device, dtype: torch.dtype | None
+) -> dict[str, float]:
     model.eval()
     losses: list[float] = []
     predictions: list[np.ndarray] = []

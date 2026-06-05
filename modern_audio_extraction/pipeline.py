@@ -4,7 +4,6 @@ import json
 from pathlib import Path
 
 from loguru import logger
-from omegaconf import OmegaConf
 import torch
 
 from modern_audio_extraction.distillation import (
@@ -19,10 +18,6 @@ from modern_audio_extraction.models import (
     load_stolen_encoder,
 )
 from modern_bert_extraction.training import resolve_device, save_json
-
-
-def load_config(path: str | Path) -> dict:
-    return OmegaConf.to_container(OmegaConf.load(path), resolve=True)  # type: ignore[return-value]
 
 
 class AudioEncoderExtractionPipeline:

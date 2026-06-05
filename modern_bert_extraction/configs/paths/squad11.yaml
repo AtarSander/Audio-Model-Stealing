@@ -1,0 +1,6 @@
+squad_dir: data/raw/squad
+wikitext_raw: data/raw/wikitext103/wiki.train.raw
+wikitext_paragraphs: data/processed/wikitext103/wikitext103-paragraphs.txt
+output_root: output/repro/modern_qa
+checkpoint_root: checkpoints/repro/modern_qa
+victim_model_dir: null
