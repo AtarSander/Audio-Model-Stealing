@@ -12,10 +12,6 @@ GLUE_DATA_DIR = data/raw/glue
 WIKITEXT103_DIR = data/raw/wikitext103
 SQUAD_DATA_DIR = data/raw/squad
 BOOLQ_DATA_DIR = data/raw/boolq
-MODERN_CLASSIFIER_CONFIG = modern_bert_extraction/configs/classifier.yaml
-MODERN_SQUAD_CONFIG = modern_bert_extraction/configs/squad11.yaml
-MODERN_BOOLQ_CONFIG = modern_bert_extraction/configs/boolq.yaml
-MODERN_AUDIO_CONFIG = modern_audio_extraction/configs/hubert_stolenencoder.yaml
 SST2_RANDOM_VICTIM_DIR = checkpoints/repro/modern_classifier/sst2_random/victim_model
 MNLI_RANDOM_VICTIM_DIR = checkpoints/repro/modern_classifier/mnli_random/victim_model
 SQUAD11_RANDOM_VICTIM_DIR = checkpoints/repro/modern_qa/squad11_random/victim_model
@@ -99,73 +95,73 @@ data: requirements
 ## Run the modern PyTorch classifier pipeline for SST-2 RANDOM
 .PHONY: modern_reproduce_sst2_random
 modern_reproduce_sst2_random:
-	$(MODERN_RUN) -m modern_bert_extraction.run_classifier_pipeline --config $(MODERN_CLASSIFIER_CONFIG) --task SST-2 --scheme random
+	$(MODERN_RUN) -m modern_bert_extraction.run_classifier_pipeline run.task=SST-2 run.scheme=random
 
 
 ## Run the modern PyTorch classifier pipeline for SST-2 WIKI
 .PHONY: modern_reproduce_sst2_wiki
 modern_reproduce_sst2_wiki:
-	$(MODERN_RUN) -m modern_bert_extraction.run_classifier_pipeline --config $(MODERN_CLASSIFIER_CONFIG) --task SST-2 --scheme wiki
+	$(MODERN_RUN) -m modern_bert_extraction.run_classifier_pipeline run.task=SST-2 run.scheme=wiki
 
 
 ## Run the modern PyTorch classifier pipeline for SST-2 WIKI using the existing RANDOM victim
 .PHONY: modern_reproduce_sst2_wiki_reuse_victim
 modern_reproduce_sst2_wiki_reuse_victim:
-	$(MODERN_RUN) -m modern_bert_extraction.run_classifier_pipeline --config $(MODERN_CLASSIFIER_CONFIG) --task SST-2 --scheme wiki --victim-model-dir $(SST2_RANDOM_VICTIM_DIR)
+	$(MODERN_RUN) -m modern_bert_extraction.run_classifier_pipeline run.task=SST-2 run.scheme=wiki paths.victim_model_dir=$(SST2_RANDOM_VICTIM_DIR)
 
 
 ## Run the modern PyTorch classifier pipeline for MNLI RANDOM
 .PHONY: modern_reproduce_mnli_random
 modern_reproduce_mnli_random:
-	$(MODERN_RUN) -m modern_bert_extraction.run_classifier_pipeline --config $(MODERN_CLASSIFIER_CONFIG) --task MNLI --scheme random
+	$(MODERN_RUN) -m modern_bert_extraction.run_classifier_pipeline run.task=MNLI run.scheme=random
 
 
 ## Run the modern PyTorch classifier pipeline for MNLI WIKI
 .PHONY: modern_reproduce_mnli_wiki
 modern_reproduce_mnli_wiki:
-	$(MODERN_RUN) -m modern_bert_extraction.run_classifier_pipeline --config $(MODERN_CLASSIFIER_CONFIG) --task MNLI --scheme wiki
+	$(MODERN_RUN) -m modern_bert_extraction.run_classifier_pipeline run.task=MNLI run.scheme=wiki
 
 
 ## Run the modern PyTorch classifier pipeline for MNLI WIKI using the existing RANDOM victim
 .PHONY: modern_reproduce_mnli_wiki_reuse_victim
 modern_reproduce_mnli_wiki_reuse_victim:
-	$(MODERN_RUN) -m modern_bert_extraction.run_classifier_pipeline --config $(MODERN_CLASSIFIER_CONFIG) --task MNLI --scheme wiki --victim-model-dir $(MNLI_RANDOM_VICTIM_DIR)
+	$(MODERN_RUN) -m modern_bert_extraction.run_classifier_pipeline run.task=MNLI run.scheme=wiki paths.victim_model_dir=$(MNLI_RANDOM_VICTIM_DIR)
 
 
 ## Run the modern PyTorch QA pipeline for SQuAD 1.1 RANDOM
 .PHONY: modern_reproduce_squad11_random
 modern_reproduce_squad11_random:
-	$(MODERN_RUN) -m modern_bert_extraction.run_squad_pipeline --config $(MODERN_SQUAD_CONFIG) --scheme random
+	$(MODERN_RUN) -m modern_bert_extraction.run_squad_pipeline run.scheme=random
 
 
 ## Run the modern PyTorch QA pipeline for SQuAD 1.1 WIKI
 .PHONY: modern_reproduce_squad11_wiki
 modern_reproduce_squad11_wiki:
-	$(MODERN_RUN) -m modern_bert_extraction.run_squad_pipeline --config $(MODERN_SQUAD_CONFIG) --scheme wiki
+	$(MODERN_RUN) -m modern_bert_extraction.run_squad_pipeline run.scheme=wiki
 
 
 ## Run the modern PyTorch QA pipeline for SQuAD 1.1 WIKI using the existing RANDOM victim
 .PHONY: modern_reproduce_squad11_wiki_reuse_victim
 modern_reproduce_squad11_wiki_reuse_victim:
-	$(MODERN_RUN) -m modern_bert_extraction.run_squad_pipeline --config $(MODERN_SQUAD_CONFIG) --scheme wiki --victim-model-dir $(SQUAD11_RANDOM_VICTIM_DIR)
+	$(MODERN_RUN) -m modern_bert_extraction.run_squad_pipeline run.scheme=wiki paths.victim_model_dir=$(SQUAD11_RANDOM_VICTIM_DIR)
 
 
 ## Run the modern PyTorch BoolQ pipeline for RANDOM
 .PHONY: modern_reproduce_boolq_random
 modern_reproduce_boolq_random:
-	$(MODERN_RUN) -m modern_bert_extraction.run_boolq_pipeline --config $(MODERN_BOOLQ_CONFIG) --scheme random
+	$(MODERN_RUN) -m modern_bert_extraction.run_boolq_pipeline run.scheme=random
 
 
 ## Run the modern PyTorch BoolQ pipeline for WIKI
 .PHONY: modern_reproduce_boolq_wiki
 modern_reproduce_boolq_wiki:
-	$(MODERN_RUN) -m modern_bert_extraction.run_boolq_pipeline --config $(MODERN_BOOLQ_CONFIG) --scheme wiki
+	$(MODERN_RUN) -m modern_bert_extraction.run_boolq_pipeline run.scheme=wiki
 
 
 ## Run the modern PyTorch BoolQ pipeline for WIKI using the existing RANDOM victim
 .PHONY: modern_reproduce_boolq_wiki_reuse_victim
 modern_reproduce_boolq_wiki_reuse_victim:
-	$(MODERN_RUN) -m modern_bert_extraction.run_boolq_pipeline --config $(MODERN_BOOLQ_CONFIG) --scheme wiki --victim-model-dir $(BOOLQ_RANDOM_VICTIM_DIR)
+	$(MODERN_RUN) -m modern_bert_extraction.run_boolq_pipeline run.scheme=wiki paths.victim_model_dir=$(BOOLQ_RANDOM_VICTIM_DIR)
 
 
 ## Run all modern WIKI pipelines with freshly trained per-run victims
@@ -181,19 +177,13 @@ modern_reproduce_wiki_reuse_victims: modern_reproduce_sst2_wiki_reuse_victim mod
 ## Run the modern HuBERT audio encoder extraction pipeline
 .PHONY: modern_audio_hubert
 modern_audio_hubert:
-	$(MODERN_RUN) -m modern_audio_extraction.run_audio_encoder_pipeline --config $(MODERN_AUDIO_CONFIG)
-
-
-## Run a tiny synthetic smoke test for the modern audio encoder extraction pipeline
-.PHONY: modern_audio_hubert_smoke
-modern_audio_hubert_smoke:
-	$(MODERN_RUN) -m modern_audio_extraction.run_audio_encoder_pipeline --config $(MODERN_AUDIO_CONFIG) --run-name smoke --output-root /tmp/audio_model_stealing_audio_smoke --target-model hf-internal-testing/tiny-random-wav2vec2 --student-model hf-internal-testing/tiny-random-wav2vec2 --query-source-type synthetic_noise --query-budget 2 --query-max-duration-seconds 0.25 --num-train-epochs 1 --train-batch-size 1 --query-batch-size 1 --eval-batch-size 1 --device cpu --require-gpu false --mixed-precision none --disable-downstream
+	$(MODERN_RUN) -m modern_audio_extraction.run_audio_encoder_pipeline
 
 
 ## Run the HuBERT extraction matrix over query budgets, surrogate architectures, and query sources
 .PHONY: modern_audio_hubert_matrix
 modern_audio_hubert_matrix:
-	$(MODERN_RUN) -m modern_audio_extraction.run_audio_experiment_matrix --config $(MODERN_AUDIO_CONFIG)
+	$(MODERN_RUN) -m modern_audio_extraction.run_audio_experiment_matrix
 
 
 ## Collect text and audio extraction metrics into one comparison table

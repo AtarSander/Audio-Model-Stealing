@@ -1,18 +1,8 @@
 # Data
 /data/*
-!/data/.gitkeep
-!/data/external/
-!/data/external/.gitkeep
-!/data/interim/
-!/data/interim/.gitkeep
-!/data/processed/
-!/data/processed/.gitkeep
-!/data/raw/
-!/data/raw/.gitkeep
 /checkpoints/*
-!/checkpoints/.gitkeep
+/checkpoints/.gitkeep
 /output/*
-!/output/.gitkeep
 /external/repro/
 
 # Mac OS-specific storage files

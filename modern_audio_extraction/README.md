@@ -51,12 +51,6 @@ Run a full HuBERT experiment:
 make modern_audio_hubert
 ```
 
-Run a small synthetic smoke test:
-
-```bash
-make modern_audio_hubert_smoke
-```
-
 Run the query-budget / surrogate-architecture / query-source matrix:
 
 ```bash
