@@ -1,0 +1,7 @@
+model,accuracy
+baseline_indoors,0.6492
+indoors_indoors,0.6511
+calteh_indoors,0.4901
+baseline_cubs,0.5499
+cubs_cubs,0.4531
+calteh_cubs,0.3635
